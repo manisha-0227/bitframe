@@ -2,15 +2,14 @@ import axios from 'axios';
 
 /**
  * AI Service for code generation and modification
- * ✅ Now uses OpenRouter API only
+ * Uses OpenRouter API – set REACT_APP_OPENROUTER_API_KEY in .env (get key at openrouter.ai/keys)
  */
 
-const AI_API_KEY = "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"; 
-const AI_API_BASE_URL = "https://openrouter.ai/api/v1/chat/completions";
+const AI_API_KEY = process.env.REACT_APP_OPENROUTER_API_KEY || '';
+const AI_API_BASE_URL = 'https://openrouter.ai/api/v1/chat/completions';
 
-// Debug: Show API load status
 if (process.env.NODE_ENV === 'development') {
-  console.log('AI API Key:', AI_API_KEY ? 'Configured ✅' : 'Missing ❌');
+  console.log('OpenRouter API Key:', AI_API_KEY ? 'Configured ✅' : 'Missing ❌ (set REACT_APP_OPENROUTER_API_KEY in .env)');
 }
 
 /**
@@ -74,7 +73,7 @@ Output updated complete code only:
 export const generateCodeWithAI = async (userPrompt, currentCode, currentLanguage) => {
   try {
     if (!AI_API_KEY) {
-      return { success: false, error: "❌ OpenRouter API key missing!" };
+      return { success: false, error: "❌ OpenRouter API key missing. Set REACT_APP_OPENROUTER_API_KEY in .env (get one at openrouter.ai/keys)." };
     }
 
     if (!userPrompt) {
@@ -123,7 +122,7 @@ export const generateCodeWithAI = async (userPrompt, currentCode, currentLanguag
       const status = error.response.status;
       const message = error.response.data?.error || error.message;
 
-      if (status === 401) return { success: false, error: "❌ Invalid API Key" };
+      if (status === 401) return { success: false, error: "❌ Invalid API Key. Get a valid key at openrouter.ai/keys and set REACT_APP_OPENROUTER_API_KEY in .env, then restart the app." };
       if (status === 429) return { success: false, error: "⏳ Rate limit exceeded" };
 
       return { success: false, error: `API Error: ${message}` };
