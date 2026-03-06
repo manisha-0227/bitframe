@@ -1,4 +1,4 @@
-# Code Deck | An Online IDE
+# BitFrame | An Online IDE
 
 ## Demo
 
@@ -16,6 +16,7 @@
 8. Input and Output console(can upload text files for input & download output)
 9. Functionality to save multiple playground in local storage
 10. Add Fullscreen Support
+11. **AI Code Assistant** - Generate, modify, and optimize code using natural language prompts
 
 
 ## Technologies Used
@@ -25,7 +26,54 @@
 - Judge0 CE API - to create and get submissions
 - Rapid API - to Setup Judge0 CE API
 - Axios - to make API calls
-- React Router - For routing 
+- React Router - For routing
+- OpenAI API - for AI-powered code generation and modification
+
+## AI Code Assistant Setup
+
+The AI Code Assistant feature allows you to generate, modify, and optimize code using natural language prompts.
+
+### Setup Instructions
+
+1. **Get an OpenAI API Key:**
+   - Visit [OpenAI Platform](https://platform.openai.com/api-keys)
+   - Sign up or log in to your account
+   - Create a new API key
+
+2. **Configure Environment Variables:**
+   - Create a `.env` file in the root directory of the project
+   - Add your OpenAI API key:
+     ```
+     REACT_APP_OPENAI_API_KEY=your_openai_api_key_here
+     ```
+   - **Run Code** uses the public [Judge0 CE](https://ce.judge0.com) API – no API key required.
+   - **Important:** Never commit your `.env` file to version control
+
+3. **Restart the Development Server:**
+   - After adding the API key, restart your development server:
+     ```bash
+     npm run dev
+     ```
+
+### Using the AI Assistant
+
+1. Click the robot icon button in the bottom-right corner to open the AI Assistant
+2. Type a natural language prompt describing what you want to do with your code
+3. Examples:
+   - "Add error handling to this function"
+   - "Optimize this code for better performance"
+   - "Add comments explaining the logic"
+   - "Create a function to calculate factorial"
+4. The AI will analyze your prompt, modify the code accordingly, and update the editor automatically
+
+### Features
+
+- **Natural Language Understanding:** Describe what you want in plain English
+- **Code Analysis:** AI analyzes your current code and understands the context
+- **Automatic Updates:** Generated code is automatically inserted into the editor
+- **Language-Aware:** Understands the programming language you're working with
+- **Formatting Preserved:** Maintains proper code formatting and indentation
+- **Error Handling:** Provides clear error messages if something goes wrong 
 
 # Link & References 
 

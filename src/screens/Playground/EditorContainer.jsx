@@ -5,6 +5,7 @@ import { BiEditAlt, BiImport, BiExport, BiFullscreen } from 'react-icons/bi'
 import { ModalContext } from '../../context/ModalContext'
 import Select from 'react-select';
 import { languageMap } from '../../context/PlaygroundContext'
+import AIAssistant from '../../components/AIAssistant'
 
 const StyledEditorContainer = styled.div`
   display: flex;
@@ -226,6 +227,11 @@ const EditorContainer = ({
         </a>
         <SaveAndRunButton onClick={runCode}>Run Code</SaveAndRunButton>
       </LowerToolBar>
+      <AIAssistant
+        currentCode={currentCode}
+        currentLanguage={currentLanguage}
+        onCodeUpdate={setCurrentCode}
+      />
     </StyledEditorContainer >
   )
 }

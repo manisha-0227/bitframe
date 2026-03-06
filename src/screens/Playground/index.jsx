@@ -8,8 +8,10 @@ import { useParams } from 'react-router-dom'
 import { languageMap, PlaygroundContext } from '../../context/PlaygroundContext'
 import { ModalContext } from '../../context/ModalContext'
 import Modal from '../../components/Modal'
-import { Buffer } from 'buffer'
 import axios from 'axios'
+
+// Public Judge0 CE – no API key (https://ce.judge0.com)
+const JUDGE0_PUBLIC = 'https://ce.judge0.com'
 const MainContainer = styled.div`
   display: grid;
   grid-template-columns: ${({ isFullScreen }) => isFullScreen ? '1fr' : '2fr 1fr'};
@@ -43,95 +45,88 @@ const Playground = () => {
     savePlayground(folderId, playgroundId, currentCode, currentLanguage)
   }
 
-  const encode = (str) => {
-    return Buffer.from(str, "binary").toString("base64")
+  const getSubmission = async (token) => {
+    const { data } = await axios.get(
+      `${JUDGE0_PUBLIC}/submissions/${token}`,
+      { params: { base64_encoded: 'false' } }
+    )
+    return data
   }
 
-  const decode = (str) => {
-    return Buffer.from(str, 'base64').toString()
-  }
-
-  const postSubmission = async (language_id, source_code, stdin) => {
-    const options = {
-      method: 'POST',
-      url: 'https://judge0-ce.p.rapidapi.com/submissions',
-      params: { base64_encoded: 'true', fields: '*' },
-      headers: {
-        'content-type': 'application/json',
-        'Content-Type': 'application/json',
-        'X-RapidAPI-Key': 'b4e5c5a05fmsh9adf6ec091523f8p165338jsncc58f31c26e1',
-        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-      },
-      data: JSON.stringify({
-        language_id: language_id,
-        source_code: source_code,
-        stdin: stdin
-      })
-    };
-
-    const res = await axios.request(options);
-    return res.data.token
-  }
-
-  const getOutput = async (token) => {
-    // we will make api call here
-    const options = {
-      method: 'GET',
-      url: "https://judge0-ce.p.rapidapi.com/submissions/" + token,
-      params: { base64_encoded: 'true', fields: '*' },
-      headers: {
-        'X-RapidAPI-Key': '3ed7a75b44mshc9e28568fe0317bp17b5b2jsn6d89943165d8',
-        'X-RapidAPI-Host': 'judge0-ce.p.rapidapi.com'
-      }
-    };
-
-    // call the api
-    const res = await axios.request(options);
-    if (res.data.status_id <= 2) {
-      const res2 = await getOutput(token);
-      return res2.data;
+  const speakOutput = (text) => {
+    try {
+      const synth = typeof window !== 'undefined' && (window.speechSynthesis || window.webkitSpeechSynthesis)
+      if (!text || !synth) return
+      const toSpeak = text.replace(/\n+/g, ' ').trim()
+      if (!toSpeak) return
+      synth.cancel()
+      const Utterance = window.SpeechSynthesisUtterance || window.webkitSpeechSynthesisUtterance
+      if (!Utterance) return
+      const utterance = new Utterance(toSpeak)
+      utterance.rate = 0.95
+      synth.speak(utterance)
+    } catch (_) {
+      // Speech unavailable or blocked – works on Windows & Mac in Chrome, Edge, Firefox, Safari
     }
-    return res.data;
   }
 
   const runCode = async () => {
     openModal({
       show: true,
       modalType: 6,
-      identifiers: {
-        folderId: "",
-        cardId: "",
-      }
+      identifiers: { folderId: '', cardId: '' }
     })
-    const language_id = languageMap[currentLanguage].id;
-    const source_code = encode(currentCode);
-    const stdin = encode(currentInput);
+    const languageId = languageMap[currentLanguage]?.id ?? languageMap.javascript.id
 
-    // pass these things to Create Submissions
-    const token = await postSubmission(language_id, source_code, stdin);
+    try {
+      const { data: postRes } = await axios.post(
+        `${JUDGE0_PUBLIC}/submissions`,
+        {
+          source_code: currentCode,
+          language_id: languageId,
+          stdin: currentInput
+        },
+        {
+          params: { base64_encoded: 'false', wait: 'true' },
+          headers: { 'Content-Type': 'application/json' }
+        }
+      )
 
-    // get the output
-    const res = await getOutput(token);
-    const status_name = res.status.description;
-    const decoded_output = decode(res.stdout ? res.stdout : '');
-    const decoded_compile_output = decode(res.compile_output ? res.compile_output : '');
-    const decoded_error = decode(res.stderr ? res.stderr : '');
-
-    let final_output = '';
-    if (res.status_id !== 3) {
-      // our code have some error
-      if (decoded_compile_output === "") {
-        final_output = decoded_error;
+      let res = postRes
+      if (res.token != null && res.stdout == null && res.stderr == null) {
+        let statusId = res.status_id ?? res.status?.id
+        while (statusId != null && statusId <= 2) {
+          await new Promise((r) => setTimeout(r, 600))
+          res = await getSubmission(res.token)
+          statusId = res.status_id ?? res.status?.id
+        }
       }
-      else {
-        final_output = decoded_compile_output;
+
+      const statusId = res.status_id ?? res.status?.id
+      const statusName = res.status?.description || 'Done'
+      const out = res.stdout ?? ''
+      const compileOut = res.compile_output ?? ''
+      const err = res.stderr ?? ''
+
+      let finalOutput = ''
+      if (statusId !== 3) {
+        finalOutput = compileOut || err || res.message || 'No output'
+      } else {
+        finalOutput = out
       }
+      const outputText = `${statusName}\n\n${finalOutput}`
+      setCurrentOutput(outputText)
+      speakOutput(outputText)
+    } catch (err) {
+      const msg =
+        err.response?.data?.message ||
+        err.response?.data?.error ||
+        err.message ||
+        'Execution failed'
+      setCurrentOutput(`Error\n\n${msg}`)
+      speakOutput(`Error. ${msg}`)
     }
-    else {
-      final_output = decoded_output;
-    }
-    setCurrentOutput(status_name + "\n\n" + final_output);
-    closeModal();
+    closeModal()
   }
 
   const getFile = (e, setState) => {
